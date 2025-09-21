@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <link rel="stylesheet" href="FTCss.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Personal Finance Tracker</h1>
+            <p class="subtitle">Track your income and expenses with ease</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="card">
+                <h3>Total Balance</h3>
+                <div class="amount" id="totalBalance">BDT: 0.00</div>
+                <p>Your current financial status</p>
+            </div>
+            
+            <div class="card">
+                <h3>Total Income</h3>
+                <div class="amount positive" id="totalIncome">BDT: 0.00</div>
+                <p>All money received</p>
+            </div>
+            
+            <div class="card">
+                <h3>Total Expenses</h3>
+                <div class="amount negative" id="totalExpenses">BDT: 0.00</div>
+                <p>All money spent</p>
+            </div>
+        </div>
+
+        <div class="transaction-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" placeholder="Enter description" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">Amount (BDT)</label>
+                    <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <select id="type">
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                </div>
+                
+                <button onclick="addTransaction()">Add Transaction</button>
+            </div>
+        </div>
+
+        <div class="transactions">
+            <h2>Recent Transactions</h2>
+            <div class="transaction-list" id="transactionList">
+                <div class="no-transactions">
+                    No transactions yet. Add your first transaction above!
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="clear-btn" onclick="clearAllTransactions()" style="margin-top: 20px;">
+                    Clear All Transactions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        
+        function updateDashboard() {
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                
+            const totalExpenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                
+            const totalBalance = totalIncome - totalExpenses;
+            
+            document.getElementById('totalBalance').textContent = `BDT: ${totalBalance.toFixed(2)}`;
+            document.getElementById('totalIncome').textContent = `BDT: ${totalIncome.toFixed(2)}`;
+            document.getElementById('totalExpenses').textContent = `BDT: ${totalExpenses.toFixed(2)}`;
+            
+            if (totalBalance >= 0) {
+                document.getElementById('totalBalance').className = 'amount positive';
+            } else {
+                document.getElementById('totalBalance').className = 'amount negative';
+            }
+            
+            renderTransactions();
+        }
+        
+        function addTransaction() {
+            const description = document.getElementById('description').value.trim();
+            const amount = document.getElementById('amount').value;
+            const type = document.getElementById('type').value;
+            
+            if (!description || !amount || parseFloat(amount) <= 0) {
+                alert('Please enter a valid description and amount.');
+                return;
+            }
+            
+            const transaction = {
+                id: Date.now(),
+                description,
+                amount: parseFloat(amount).toFixed(2),
+                type,
+                date: new Date().toLocaleDateString()
+            };
+            
+            transactions.unshift(transaction);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+            
+            updateDashboard();
+        }
+        
+        function deleteTransaction(id) {
+            if (confirm('Are you sure you want to delete this transaction?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                updateDashboard();
+            }
+        }
+        
+        function clearAllTransactions() {
+            if (confirm('Are you sure you want to delete ALL transactions? This cannot be undone.')) {
+                transactions = [];
+                localStorage.removeItem('transactions');
+                updateDashboard();
+            }
+        }
+        
+        function renderTransactions() {
+            const transactionList = document.getElementById('transactionList');
+            
+            if (transactions.length === 0) {
+                transactionList.innerHTML = '<div class="no-transactions">No transactions yet. Add your first transaction above!</div>';
+                return;
+            }
+            
+            transactionList.innerHTML = transactions.map(transaction => `
+                <div class="transaction-item">
+                    <span class="transaction-type type-${transaction.type}">
+                        ${transaction.type.toUpperCase()}
+                    </span>
+                    <div>
+                        <strong>${transaction.description}</strong>
+                        <br>
+                        <small>${transaction.date}</small>
+                    </div>
+                    <div class="${transaction.type === 'income' ? 'positive' : 'negative'}">
+                        ${transaction.type === 'income' ? '+' : '-'}$${transaction.amount}
+                    </div>
+                    <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">
+                        Delete
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // Initialize the dashboard
+        updateDashboard();
+    </script>
+</body>
+</html>
